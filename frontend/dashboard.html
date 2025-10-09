@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Student Dashboard | EmoWellbeing</title>
+
+  <!-- styles -->
+  <link rel="stylesheet" href="dashboard.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand">
+      <span class="logo">✨ EmoWellbeing</span>
+      <span class="welcome" id="welcomeText"></span>
+    </div>
+
+    <nav class="nav-links">
+      <a href="#" class="active">Home</a>
+      <a href="#">Journal</a>
+      <a href="#">History</a>
+      <a href="#">Profile</a>
+    </nav>
+
+    <div class="user-controls">
+      <button id="logoutBtn" class="btn secondary">Logout</button>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <!-- Left / Main Column -->
+    <section class="card">
+      <h3>Mood Check-in</h3>
+      <p class="muted">How are you feeling right now?</p>
+      <div class="mood-row" role="radiogroup" aria-label="Mood choices">
+        <button class="mood-btn" data-mood="5" aria-label="Happy">😊</button>
+        <button class="mood-btn" data-mood="4" aria-label="Good">🙂</button>
+        <button class="mood-btn" data-mood="3" aria-label="Neutral">😐</button>
+        <button class="mood-btn" data-mood="2" aria-label="Worried">😟</button>
+        <button class="mood-btn" data-mood="1" aria-label="Sad">☹️</button>
+      </div>
+      <div class="actions">
+        <button id="submitMood" class="btn primary">Submit</button>
+        <span id="moodSavedMsg" class="muted small" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Mood History</h3>
+      <p class="muted">Recent mood trend (last 14 entries)</p>
+      <div class="chart-wrap">
+        <canvas id="moodChart" aria-label="Mood history chart" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Journal</h3>
+      <textarea id="journalEntry" placeholder="Write your thoughts here..." rows="6"></textarea>
+      <div class="actions">
+        <button id="saveJournal" class="btn primary">Save</button>
+        <span id="journalSavedMsg" class="muted small" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <!-- Right / Sidebar -->
+    <aside class="sidebar">
+      <section class="card notifications">
+        <h3>Notifications</h3>
+        <ul id="notificationsList">
+          <li>🔔 Reminder: Check-in at 5 PM</li>
+        </ul>
+      </section>
+
+      <section class="card quick-stats">
+        <h3>Quick Stats</h3>
+        <p class="stat">Entries: <strong id="statEntries">0</strong></p>
+        <p class="stat">Avg mood: <strong id="statAvg">-</strong></p>
+      </section>
+    </aside>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
