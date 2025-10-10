@@ -82,6 +82,21 @@
     </aside>
   </main>
 
+  <!-- Placeholder for Chatbot -->
+  <div id="chatbotContainer"></div>
+
   <script src="dashboard.js"></script>
+
+  <!-- Load chatbot separately -->
+  <script>
+    fetch("chatbot.html")
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById("chatbotContainer").innerHTML = html;
+        const script = document.createElement("script");
+        script.src = "chatbot.js";
+        document.body.appendChild(script);
+      });
+  </script>
 </body>
 </html>

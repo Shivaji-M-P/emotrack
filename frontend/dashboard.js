@@ -1,11 +1,8 @@
 // Dashboard behaviour (frontend-only)
-// Stores mood & journal in localStorage per user for demo (no backend required).
-
 document.addEventListener("DOMContentLoaded", () => {
   const welcomeText = document.getElementById("welcomeText");
   const logoutBtn = document.getElementById("logoutBtn");
   const loggedInUser = localStorage.getItem("loggedInUser") || "Guest";
-
   welcomeText.textContent = `Hello, ${shortName(loggedInUser)}`;
 
   logoutBtn.addEventListener("click", () => {
@@ -13,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = "index.html";
   });
 
-  // Mood UI
+  // Mood buttons
   const moodButtons = document.querySelectorAll(".mood-btn");
   let selectedMood = null;
   moodButtons.forEach(btn => {
@@ -36,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadMoodHistory();
   });
 
-  // Journal
   document.getElementById("saveJournal").addEventListener("click", () => {
     const text = document.getElementById("journalEntry").value.trim();
     if (!text) {
@@ -49,33 +45,25 @@ document.addEventListener("DOMContentLoaded", () => {
     updateStats();
   });
 
-  // Initialize chart and data
   initChart();
   loadMoodHistory();
   updateStats();
 });
 
-/* ---------- storage helpers ---------- */
-function storageKey(prefix, user) {
-  return `${prefix}_${user}`;
-}
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+/* ---------- Local Storage Helpers ---------- */
+function storageKey(prefix, user) { return `${prefix}_${user}`; }
 function shortName(email) {
   if (!email || email === "Guest") return "Guest";
   const name = email.split('@')[0];
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-/* Save mood (localStorage) */
+/* Save mood */
 function saveMood(user, mood) {
   const key = storageKey('moodHistory', user);
   const arr = JSON.parse(localStorage.getItem(key) || "[]");
   arr.push({ date: new Date().toISOString(), mood: Number(mood) });
-  // keep last 100 entries max
-  const trimmed = arr.slice(-100);
-  localStorage.setItem(key, JSON.stringify(trimmed));
+  localStorage.setItem(key, JSON.stringify(arr.slice(-100)));
 }
 
 /* Save journal */
@@ -97,33 +85,22 @@ function initChart() {
       responsive: true,
       maintainAspectRatio: false,
       elements: { line: { tension: 0.35 }, point: { radius: 4 } },
-      scales: {
-        y: { min: 1, max: 5, ticks: { stepSize: 1 } },
-        x: { ticks: { maxRotation: 0, minRotation: 0 } }
-      },
+      scales: { y: { min: 1, max: 5, ticks: { stepSize: 1 } } },
       plugins: { legend: { display: false } }
     }
   });
 }
 
-/* Load mood history and render chart */
 function loadMoodHistory() {
   const user = localStorage.getItem("loggedInUser") || "Guest";
   const key = storageKey('moodHistory', user);
   const raw = JSON.parse(localStorage.getItem(key) || "[]");
-
-  // If no data, create sample for visual (optional)
   const dataArr = raw.length ? raw : generateSampleMood();
 
-  // Use last 14 entries
   const last = dataArr.slice(-14);
-  const labels = last.map(item => {
-    const d = new Date(item.date);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  });
-  const data = last.map(item => Number(item.mood));
+  const labels = last.map(i => new Date(i.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+  const data = last.map(i => Number(i.mood));
 
-  // update chart
   moodChart.data.labels = labels;
   moodChart.data.datasets[0].data = data;
   moodChart.data.datasets[0].borderColor = '#2575fc';
@@ -133,36 +110,74 @@ function loadMoodHistory() {
   updateStats();
 }
 
-/* If no mood data, show friendly sample */
 function generateSampleMood() {
   const arr = [];
   for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    arr.push({ date: d.toISOString(), mood: 3 + Math.floor(Math.random() * 3) - 1 }); // 2..4
+    const d = new Date(); d.setDate(d.getDate() - i);
+    arr.push({ date: d.toISOString(), mood: 3 + Math.floor(Math.random() * 3) - 1 });
   }
   return arr;
 }
 
-/* ---------- stats ---------- */
 function updateStats() {
   const user = localStorage.getItem("loggedInUser") || "Guest";
   const moods = JSON.parse(localStorage.getItem(storageKey('moodHistory', user)) || "[]");
   const journals = JSON.parse(localStorage.getItem(storageKey('journals', user)) || "[]");
-
   document.getElementById("statEntries").textContent = moods.length + journals.length;
-  if (moods.length) {
-    const avg = (moods.reduce((s, i) => s + Number(i.mood), 0) / moods.length).toFixed(2);
-    document.getElementById("statAvg").textContent = avg;
-  } else {
-    document.getElementById("statAvg").textContent = "-";
-  }
+  document.getElementById("statAvg").textContent = moods.length
+    ? (moods.reduce((s, i) => s + Number(i.mood), 0) / moods.length).toFixed(2)
+    : "-";
 }
 
-/* ---------- small UI helpers ---------- */
 function showTempMessage(elId, text, ms = 1800) {
   const el = document.getElementById(elId);
   if (!el) return;
   el.textContent = text;
   setTimeout(() => { el.textContent = ""; }, ms);
+}
+
+/* ---------- Chatbot ---------- */
+document.getElementById("chatToggleBtn").addEventListener("click", () => {
+  document.getElementById("chatbotContainer").style.display = "flex";
+});
+document.getElementById("closeChat").addEventListener("click", () => {
+  document.getElementById("chatbotContainer").style.display = "none";
+});
+document.getElementById("sendMessage").addEventListener("click", sendChatMessage);
+document.getElementById("userMessage").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendChatMessage();
+});
+
+function sendChatMessage() {
+  const input = document.getElementById("userMessage");
+  const msg = input.value.trim();
+  if (!msg) return;
+  appendMessage("user", msg);
+  input.value = "";
+
+  const sentiment = analyzeSentiment(msg);
+  const reply = `Your message seems to have a <b>${sentiment}</b> sentiment.`;
+  setTimeout(() => appendMessage("bot", reply), 500);
+}
+
+function appendMessage(sender, text) {
+  const chatBox = document.getElementById("chatMessages");
+  const msgEl = document.createElement("div");
+  msgEl.classList.add("msg", sender);
+  msgEl.innerHTML = text;
+  chatBox.appendChild(msgEl);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+/* Simple rule-based sentiment analyzer */
+function analyzeSentiment(text) {
+  const positive = ['happy', 'great', 'awesome', 'good', 'love', 'excellent'];
+  const negative = ['sad', 'bad', 'angry', 'upset', 'terrible', 'hate'];
+  text = text.toLowerCase();
+  let score = 0;
+  positive.forEach(w => { if (text.includes(w)) score++; });
+  negative.forEach(w => { if (text.includes(w)) score--; });
+  if (score > 0) return 'positive 😊';
+  if (score < 0) return 'negative 😞';
+  return 'neutral 😐';
 }
