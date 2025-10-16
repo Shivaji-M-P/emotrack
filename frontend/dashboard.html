@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <!-- Navbar -->
   <header class="navbar">
     <div class="brand">
       <span class="logo">✨ EmoWellbeing</span>
@@ -30,8 +31,9 @@
     </div>
   </header>
 
+  <!-- Main Grid -->
   <main class="main-grid">
-    <!-- Left / Main Column -->
+    <!-- Left Column -->
     <section class="card">
       <h3>Mood Check-in</h3>
       <p class="muted">How are you feeling right now?</p>
@@ -63,9 +65,11 @@
         <button id="saveJournal" class="btn primary">Save</button>
         <span id="journalSavedMsg" class="muted small" aria-live="polite"></span>
       </div>
+      <!-- Journal history -->
+      <div class="journal-history card" id="journalHistory"></div>
     </section>
 
-    <!-- Right / Sidebar -->
+    <!-- Right Sidebar -->
     <aside class="sidebar">
       <section class="card notifications">
         <h3>Notifications</h3>
@@ -82,21 +86,23 @@
     </aside>
   </main>
 
-  <!-- Placeholder for Chatbot -->
-  <div id="chatbotContainer"></div>
+  <!-- Dark Mode Toggle -->
+  <button class="dark-toggle">🌙</button>
+
+  <!-- Chatbot -->
+  <button class="chat-toggle" id="chatToggleBtn">💬</button>
+  <div class="chatbot-container" id="chatbotContainer">
+    <div class="chatbot-header">
+      <span>Chatbot</span>
+      <button class="chat-close" id="closeChat">✖</button>
+    </div>
+    <div class="chatbot-messages" id="chatMessages"></div>
+    <div class="chatbot-input">
+      <input type="text" id="userMessage" placeholder="Type a message..." />
+      <button id="sendMessage">Send</button>
+    </div>
+  </div>
 
   <script src="dashboard.js"></script>
-
-  <!-- Load chatbot separately -->
-  <script>
-    fetch("chatbot.html")
-      .then(res => res.text())
-      .then(html => {
-        document.getElementById("chatbotContainer").innerHTML = html;
-        const script = document.createElement("script");
-        script.src = "chatbot.js";
-        document.body.appendChild(script);
-      });
-  </script>
 </body>
 </html>
