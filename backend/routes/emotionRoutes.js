@@ -1,5 +1,6 @@
 import express from "express";
-import { addEmotion, getEmotions } from "../controllers/emotionController.js";
+
+import { addEmotion, getEmotions } from "../controlletrs/emotionController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
