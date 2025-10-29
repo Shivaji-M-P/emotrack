@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Journal | EmoWellbeing</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ===== Navbar Centered ===== */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 20px;
+      background: linear-gradient(90deg, var(--blue), #6a11cb 120%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      border-radius: 0 0 12px 12px;
+      gap: 40px;
+      position: relative;
+    }
+    .navbar .brand { position: absolute; left: 20px; }
+
+    /* ===== Journal + Chart Container ===== */
+    .journal-chart-container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      max-width: 1200px;
+      margin: 20px auto;
+    }
+    .journal-chart-container > div {
+      flex: 1;
+      min-width: 480px;
+    }
+
+    /* ===== Journal Textarea ===== */
+    #journalEntry {
+      width: 100%;
+      min-height: 400px;
+      font-size: 16px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #e6e9ef;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    body.dark-mode #journalEntry {
+      background: #3b3b50;
+      color: var(--dark-text);
+      border: 1px solid #555;
+    }
+
+    /* ===== Mood Selector ===== */
+    .mood-select { margin: 16px 0; display: flex; align-items: center; gap: 8px; }
+    .mood-select select { padding: 6px 10px; border-radius: 8px; border: 1px solid #e6e9ef; }
+    body.dark-mode .mood-select select { background: #3b3b50; color: var(--dark-text); border:1px solid #555; }
+
+    /* ===== Word Count ===== */
+    #wordCount { font-size: 13px; color: var(--muted); margin-top: 4px; display: block; }
+
+    /* ===== Search Filter ===== */
+    #journalSearch { width: 100%; padding: 8px 12px; margin-bottom: 12px; border-radius: 12px; border:1px solid #e6e9ef; }
+    body.dark-mode #journalSearch { background:#3b3b50; color: var(--dark-text); border:1px solid #555; }
+
+    /* Mood filter dropdown */
+    #moodFilter { width: 100%; padding: 8px 12px; margin-bottom: 12px; border-radius: 12px; border:1px solid #e6e9ef; }
+    body.dark-mode #moodFilter { background:#3b3b50; color: var(--dark-text); border:1px solid #555; }
+
+    /* ===== Chart ===== */
+    .chart-wrap { height: 450px; min-height: 450px; max-height: 450px; }
+
+    /* ===== Journal history entry colors ===== */
+    .journal-entry[data-mood="5"] { border-left: 5px solid #FFD93D; }
+    .journal-entry[data-mood="4"] { border-left: 5px solid #6BCB77; }
+    .journal-entry[data-mood="3"] { border-left: 5px solid #FF6B6B; }
+    .journal-entry[data-mood="2"] { border-left: 5px solid #FF922B; }
+    .journal-entry[data-mood="1"] { border-left: 5px solid #4D96FF; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="brand"><span class="logo">✨ EmoWellbeing</span></div>
+    <nav class="nav-links">
+      <a href="dashboard.html">Home</a>
+      <a href="journal.html" class="active">Journal</a>
+      <a href="history.html">History</a>
+          <a href="quiz.html">Quiz</a>
+      
+    </nav>
+  </header>
+
+  <!-- Journal + Chart Container -->
+  <div class="journal-chart-container">
+    <!-- Journal Card -->
+    <div class="card">
+      <h3>Your Journal</h3>
+
+      <input type="text" id="journalSearch" placeholder="Search journal entries...">
+      <select id="moodFilter">
+        <option value="">All Moods</option>
+        <option value="5">😊 Happy</option>
+        <option value="4">🙂 Good</option>
+        <option value="3">😐 Neutral</option>
+        <option value="2">😟 Worried</option>
+        <option value="1">☹️ Sad</option>
+      </select>
+
+      <textarea id="journalEntry" placeholder="Write your thoughts here..."></textarea>
+      <span id="wordCount">Words: 0</span>
+
+      <div class="mood-select">
+        <label>Mood:</label>
+        <select id="journalMood">
+          <option value="">None</option>
+          <option value="5">😊 Happy</option>
+          <option value="4">🙂 Good</option>
+          <option value="3">😐 Neutral</option>
+          <option value="2">😟 Worried</option>
+          <option value="1">☹️ Sad</option>
+        </select>
+      </div>
+
+      <div class="actions" style="margin-top:12px;">
+        <button id="saveJournal" class="btn primary">Save</button>
+        <span id="journalSavedMsg" class="muted small" aria-live="polite"></span>
+      </div>
+
+      <div class="journal-history" id="journalHistory" style="margin-top:20px;"></div>
+    </div>
+
+    <!-- Mood Chart Card -->
+    <div class="card">
+      <h3>Mood Trend</h3>
+      <div class="chart-wrap">
+        <canvas id="journalMoodChart" aria-label="Mood trend chart" role="img"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const user = localStorage.getItem("loggedInUser") || "Guest";
+      const entryField = document.getElementById("journalEntry");
+      const wordCountEl = document.getElementById("wordCount");
+      const searchField = document.getElementById("journalSearch");
+      const moodFilter = document.getElementById("moodFilter");
+
+      // Live word count
+      entryField.addEventListener("input", () => {
+        const count = entryField.value.trim().split(/\s+/).filter(w => w).length;
+        wordCountEl.textContent = `Words: ${count}`;
+      });
+
+      // Save journal
+      document.getElementById("saveJournal").addEventListener("click", () => {
+        const text = entryField.value.trim();
+        const mood = document.getElementById("journalMood").value;
+        if (!text) { showTempMessage("journalSavedMsg","Write something before saving.",2500); return; }
+        saveJournal(user, text, mood);
+        entryField.value = "";
+        document.getElementById("journalMood").value = "";
+        wordCountEl.textContent = "Words: 0";
+        showTempMessage("journalSavedMsg","Journal saved ✓",1800);
+        loadJournalHistory(searchField.value.trim(), moodFilter.value);
+      });
+
+      // Search and mood filter
+      searchField.addEventListener("input", () => { loadJournalHistory(searchField.value.trim(), moodFilter.value); });
+      moodFilter.addEventListener("change", () => { loadJournalHistory(searchField.value.trim(), moodFilter.value); });
+
+      loadJournalHistory();
+    });
+
+    function saveJournal(user, text, mood) {
+      const key = storageKey('journals', user);
+      const arr = JSON.parse(localStorage.getItem(key) || "[]");
+      arr.push({ date: new Date().toISOString(), text, mood });
+      localStorage.setItem(key, JSON.stringify(arr.slice(-200)));
+    }
+
+    function loadJournalHistory(filterText="", filterMood="") {
+      const user = localStorage.getItem("loggedInUser") || "Guest";
+      const journals = JSON.parse(localStorage.getItem(storageKey('journals', user)) || "[]");
+      const container = document.getElementById("journalHistory");
+      container.innerHTML = "";
+
+      journals.slice().reverse().forEach((j,index) => {
+        if(filterText && !j.text.toLowerCase().includes(filterText.toLowerCase())) return;
+        if(filterMood && j.mood !== filterMood) return;
+        const moodTag = j.mood ? `<span class="entry-mood">${getMoodEmoji(j.mood)}</span>` : '';
+        const el = document.createElement("div");
+        el.className = "journal-entry";
+        if(j.mood) el.dataset.mood = j.mood;
+        el.innerHTML = `
+          <div class="entry-header">
+            <small>${new Date(j.date).toLocaleString()}</small> ${moodTag}
+            <button class="delete-entry" onclick="deleteEntry(${index})">✖</button>
+          </div>
+          <p>${j.text}</p>
+        `;
+        container.appendChild(el);
+      });
+
+      loadJournalMoodChart();
+    }
+
+    function getMoodEmoji(mood) {
+      switch(Number(mood)) { case 5: return "😊"; case 4: return "🙂"; case 3: return "😐"; case 2: return "😟"; case 1: return "☹️"; default: return ""; }
+    }
+
+    function deleteEntry(idx) {
+      const user = localStorage.getItem("loggedInUser") || "Guest";
+      const key = storageKey('journals', user);
+      const arr = JSON.parse(localStorage.getItem(key) || "[]");
+      arr.splice(arr.length - 1 - idx, 1);
+      localStorage.setItem(key, JSON.stringify(arr));
+      loadJournalHistory();
+    }
+
+    // Chart.js for mood trend
+    let journalChart = null;
+    function loadJournalMoodChart() {
+      const user = localStorage.getItem("loggedInUser") || "Guest";
+      const journals = JSON.parse(localStorage.getItem(storageKey('journals', user)) || "[]");
+      if(!journalChart) {
+        const ctx = document.getElementById("journalMoodChart").getContext("2d");
+        journalChart = new Chart(ctx,{
+          type:'line',
+          data:{labels:[],datasets:[{label:'Mood',data:[],fill:true}]},
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            elements:{line:{tension:0.35},point:{radius:5}},
+            scales:{y:{min:1,max:5,ticks:{stepSize:1}}},
+            plugins:{legend:{display:false}}
+          }
+        });
+      }
+      const last = journals.slice(-14);
+      const labels = last.map(i=>new Date(i.date).toLocaleDateString());
+      const data = last.map(i=>Number(i.mood)||3);
+      const colors = data.map(m=>{
+        switch(m){case 5:return '#FFD93D';case 4:return '#6BCB77';case 3:return '#FF6B6B';case 2:return '#FF922B';case 1:return '#4D96FF';default:return '#2575fc';}
+      });
+      journalChart.data.labels = labels;
+      journalChart.data.datasets[0].data = data;
+      journalChart.data.datasets[0].pointBackgroundColor = colors;
+      journalChart.data.datasets[0].borderColor = '#2575fc';
+      journalChart.data.datasets[0].backgroundColor = 'rgba(37,117,252,0.18)';
+      journalChart.update();
+    }
+  </script>
+</body>
+</html>

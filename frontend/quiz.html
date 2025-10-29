@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mental Health Quiz | EmoWellbeing</title>
+<link rel="stylesheet" href="dashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.main-quiz { max-width: 900px; margin: 20px auto; display: flex; flex-direction: column; gap: 20px; }
+.quiz-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); transition: background 0.3s, box-shadow 0.3s; }
+body.dark-mode .quiz-card { background: var(--dark-card); color: var(--dark-text); }
+.quiz-question { font-weight: 500; margin-bottom: 12px; }
+.quiz-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.quiz-options label { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid #e6e9ef; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+body.dark-mode .quiz-options label { border: 1px solid #555; }
+.quiz-options input[type="radio"] { accent-color: var(--blue); }
+.quiz-options label:hover { background: #f4f6f9; }
+body.dark-mode .quiz-options label:hover { background: #3b3b50; }
+.feedback { font-size: 14px; margin-top: 8px; font-weight: 500; }
+.progress-bar-container { width: 100%; background: #e6e9ef; border-radius: 12px; height: 12px; margin-bottom: 12px; }
+body.dark-mode .progress-bar-container { background: #555; }
+.progress-bar { height: 100%; background: var(--blue); width: 0%; border-radius: 12px; transition: width 0.3s; }
+#scoreChart { max-width: 400px; margin-top: 20px; }
+.btn-nav { margin-right: 10px; }
+.result-text { font-weight:600; margin-top:12px; font-size:16px; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<header class="navbar">
+  <div class="brand"><span class="logo">✨ EmoWellbeing</span></div>
+  <nav class="nav-links">
+    <a href="dashboard.html">Home</a>
+    <a href="journal.html">Journal</a>
+    <a href="history.html">History</a>
+    <a href="quiz.html" class="active">Quiz</a>
+  </nav>
+</header>
+
+<main class="main-quiz">
+  <section class="quiz-card">
+    <h3>Mental Health Self-Assessment</h3>
+    <p class="muted">Answer honestly to see how you are feeling overall.</p>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div id="quizContainer"></div>
+    
+    <div>
+      <button id="prevBtn" class="btn btn-nav">Previous</button>
+      <button id="nextBtn" class="btn btn-nav">Next</button>
+      <button id="submitQuiz" class="btn primary" style="display:none;">Submit</button>
+    </div>
+
+    <p id="quizScore" class="result-text"></p>
+    <canvas id="scoreChart"></canvas>
+  </section>
+</main>
+
+<script>
+// Mental Health Quiz Questions
+const quizData = [
+  {question:"How often do you feel anxious or stressed?", options:["Always","Often","Sometimes","Rarely"], score:[1,2,3,4]},
+  {question:"How often do you feel happy or content?", options:["Rarely","Sometimes","Often","Always"], score:[1,2,3,4]},
+  {question:"How is your sleep quality?", options:["Poor","Average","Good","Excellent"], score:[1,2,3,4]},
+  {question:"How often do you exercise or move your body?", options:["Never","Occasionally","Regularly","Daily"], score:[1,2,3,4]},
+  {question:"How often do you feel motivated during the day?", options:["Rarely","Sometimes","Often","Always"], score:[1,2,3,4]},
+  {question:"How often do you socialize or talk to friends/family?", options:["Never","Rarely","Sometimes","Often"], score:[1,2,3,4]},
+  {question:"How often do you take breaks to relax or meditate?", options:["Never","Sometimes","Often","Always"], score:[1,2,3,4]}
+];
+
+let currentQ = 0;
+let userAnswers = [];
+const user = localStorage.getItem("loggedInUser") || "Guest";
+
+function loadQuestion() {
+  const q = quizData[currentQ];
+  const container = document.getElementById("quizContainer");
+  container.innerHTML = `
+    <p class="quiz-question">${currentQ+1}. ${q.question}</p>
+    <div class="quiz-options">
+      ${q.options.map((opt,i)=>`
+        <label><input type="radio" name="q${currentQ}" value="${i}"> ${opt}</label>
+      `).join('')}
+    </div>
+    <p class="feedback" id="feedback"></p>
+  `;
+  // restore previous selection
+  if(userAnswers[currentQ] !== undefined){
+    const sel = container.querySelector(`input[value="${userAnswers[currentQ]}"]`);
+    if(sel) sel.checked = true;
+  }
+  updateProgressBar();
+  document.getElementById("prevBtn").style.display = currentQ === 0 ? "none" : "inline-block";
+  document.getElementById("nextBtn").style.display = currentQ === quizData.length-1 ? "none" : "inline-block";
+  document.getElementById("submitQuiz").style.display = currentQ === quizData.length-1 ? "inline-block" : "none";
+}
+
+function updateProgressBar(){
+  const percent = ((currentQ)/quizData.length)*100;
+  document.getElementById("progressBar").style.width = percent + "%";
+}
+
+function saveAnswer() {
+  const selected = document.querySelector(`input[name="q${currentQ}"]:checked`);
+  if(selected) userAnswers[currentQ] = Number(selected.value);
+}
+
+function showFeedback() {
+  const feedbackEl = document.getElementById("feedback");
+  const selected = userAnswers[currentQ];
+  if(selected === undefined){ feedbackEl.textContent = ""; return; }
+  // Optional: show simple feedback
+  feedbackEl.textContent = "Answer saved";
+  feedbackEl.style.color = "#2575fc";
+}
+
+document.getElementById("nextBtn").addEventListener("click", ()=>{
+  saveAnswer();
+  showFeedback();
+  currentQ++;
+  loadQuestion();
+});
+
+document.getElementById("prevBtn").addEventListener("click", ()=>{
+  saveAnswer();
+  showFeedback();
+  currentQ--;
+  loadQuestion();
+});
+
+document.getElementById("submitQuiz").addEventListener("click", ()=>{
+  saveAnswer();
+  showFeedback();
+  let totalScore = 0;
+  quizData.forEach((q,i)=>{
+    if(userAnswers[i] !== undefined) totalScore += q.score[userAnswers[i]];
+  });
+  const status = getMentalHealthStatus(totalScore);
+  document.getElementById("quizScore").textContent = `Your mental health status: ${status}`;
+  localStorage.setItem(`mentalHealth_${user}`, JSON.stringify({score:totalScore,status,date:new Date().toISOString()}));
+  showScoreChart(totalScore);
+});
+
+function getMentalHealthStatus(score){
+  const maxScore = quizData.length*4;
+  const percent = (score/maxScore)*100;
+  if(percent<=40) return "You may be feeling stressed or down. Consider self-care or talking to someone.";
+  else if(percent<=70) return "Your mood seems okay, but watch for stress and maintain healthy habits.";
+  else return "You seem to be doing well! Keep maintaining positive mental health habits.";
+}
+
+function showScoreChart(score){
+  const maxScore = quizData.length*4;
+  const ctx = document.getElementById("scoreChart").getContext("2d");
+  new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:['Your Score','Max Score'],
+      datasets:[{
+        label:'Mental Health Assessment',
+        data:[score,maxScore],
+        backgroundColor:['#6BCB77','#FF6B6B']
+      }]
+    },
+    options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:maxScore}}}
+  });
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  loadQuestion();
+  document.getElementById("quizContainer").addEventListener("change", showFeedback);
+
+  // Dark mode toggle
+  document.querySelector(".dark-toggle")?.addEventListener("click", ()=>{
+    document.body.classList.toggle("dark-mode");
+  });
+});
+</script>
+</body>
+</html>

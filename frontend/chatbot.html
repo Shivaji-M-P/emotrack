@@ -1,17 +1,30 @@
-<!-- Chatbot UI -->
-<div class="chatbot-container" id="chatbotBox">
-  <div class="chatbot-header">
-    <h4>💬 EmoChat</h4>
-    <button id="closeChat" class="chat-close">✖</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EmoChat | Chatbot</title>
+  <link rel="stylesheet" href="chatbot.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="chatbot-container">
+    <div class="chatbot-header">
+      <h3>💬 EmoChat</h3>
+      <button id="closeChat" class="chat-close">✖</button>
+    </div>
+
+    <div class="chatbot-messages" id="chatMessages">
+      <div class="msg bot">Hello! 👋 I'm EmoChat. How are you feeling today?</div>
+    </div>
+
+    <div class="chatbot-input">
+      <input type="text" id="userMessage" placeholder="Type your message..." autocomplete="off" />
+      <button id="sendMessage">Send</button>
+    </div>
   </div>
 
-  <div class="chatbot-messages" id="chatMessages"></div>
-
-  <div class="chatbot-input">
-    <input type="text" id="userMessage" placeholder="Type your message..." />
-    <button id="sendMessage">Send</button>
-  </div>
-</div>
-
-<!-- Floating Chat Button -->
-<button id="chatToggleBtn" class="chat-toggle">💬</button>
+  <script src="chatbot.js"></script>
+</body>
+</html>

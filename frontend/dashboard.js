@@ -126,32 +126,16 @@ function updateStats(){
 }
 
 // ---------- Chatbot functions (untouched) ----------
-function sendChatMessage(){
-  const input=document.getElementById("userMessage");
-  const msg=input.value.trim();
-  if(!msg) return;
-  appendMessage("user",msg);
-  input.value="";
-  const sentiment=analyzeSentiment(msg);
-  const reply=`Your message seems to have a <b>${sentiment}</b> sentiment.`;
-  setTimeout(()=>appendMessage("bot",reply),500);
-}
-function appendMessage(sender,text){
-  const chatBox=document.getElementById("chatMessages");
-  const msgEl=document.createElement("div");
-  msgEl.classList.add("msg",sender);
-  msgEl.innerHTML=text;
-  chatBox.appendChild(msgEl);
-  chatBox.scrollTop=chatBox.scrollHeight;
-}
-function analyzeSentiment(text){
-  const positive=['happy','great','awesome','good','love','excellent'];
-  const negative=['sad','bad','angry','upset','terrible','hate'];
-  text=text.toLowerCase();
-  let score=0;
-  positive.forEach(w=>{if(text.includes(w))score++;});
-  negative.forEach(w=>{if(text.includes(w))score--;});
-  if(score>0)return 'positive 😊';
-  if(score<0)return 'negative 😞';
-  return 'neutral 😐';
-}
+
+// Chatbot toggle
+const chatToggleBtn = document.getElementById("chatToggleBtn");
+const chatbotContainer = document.getElementById("chatbotContainer");
+const closeChatBtn = document.getElementById("closeChat");
+
+chatToggleBtn.addEventListener("click", () => {
+  chatbotContainer.style.display = chatbotContainer.style.display === "flex" ? "none" : "flex";
+});
+
+closeChatBtn.addEventListener("click", () => {
+  chatbotContainer.style.display = "none";
+});

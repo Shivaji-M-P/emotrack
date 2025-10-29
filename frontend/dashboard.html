@@ -20,10 +20,11 @@
     </div>
 
     <nav class="nav-links">
-      <a href="#" class="active">Home</a>
-      <a href="#">Journal</a>
-      <a href="#">History</a>
-      <a href="#">Profile</a>
+      <a href="dashboard.html" class="active">Home</a>
+      <a href="journal.html">Journal</a>
+      <a href="history.html">History</a>
+          <a href="quiz.html">Quiz</a>
+      
     </nav>
 
     <div class="user-controls">
@@ -89,19 +90,16 @@
   <!-- Dark Mode Toggle -->
   <button class="dark-toggle">🌙</button>
 
-  <!-- Chatbot -->
-  <button class="chat-toggle" id="chatToggleBtn">💬</button>
-  <div class="chatbot-container" id="chatbotContainer">
-    <div class="chatbot-header">
-      <span>Chatbot</span>
-      <button class="chat-close" id="closeChat">✖</button>
-    </div>
-    <div class="chatbot-messages" id="chatMessages"></div>
-    <div class="chatbot-input">
-      <input type="text" id="userMessage" placeholder="Type a message..." />
-      <button id="sendMessage">Send</button>
-    </div>
-  </div>
+ <!-- Chatbot Popup -->
+<div id="chatbotContainer" class="chatbot-container" style="display:none;">
+  <iframe src="chatbot.html" title="Chatbot" frameborder="0"></iframe>
+  <button id="closeChat" class="close-chat">✖</button>
+</div>
+
+<!-- Chatbot Toggle Button -->
+<button class="chat-toggle" id="chatToggleBtn">💬</button>
+
+
 
   <script src="dashboard.js"></script>
 </body>

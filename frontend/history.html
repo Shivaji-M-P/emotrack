@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>History | EmoWellbeing</title>
+<link rel="stylesheet" href="dashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  /* Navbar centered */
+  .navbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 20px;
+    background: linear-gradient(90deg, var(--blue), #6a11cb 120%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    border-radius: 0 0 12px 12px;
+    gap: 40px;
+    position: relative;
+  }
+  .navbar .brand { position: absolute; left: 20px; }
+
+  /* History container */
+  .history-container {
+    max-width: 1400px;
+    margin: 20px auto;
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+  }
+
+  /* Chart card */
+  .chart-card { flex: 1; min-width: 500px; height: 650px; }
+
+  /* Journal card */
+  .journal-card { flex: 1.3; min-width: 600px; }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filters input, .filters select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #e6e9ef;
+  }
+  body.dark-mode .filters input,
+  body.dark-mode .filters select {
+    background:#3b3b50;
+    color: var(--dark-text);
+    border:1px solid #555;
+  }
+
+  /* Journal table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  th, td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e6e9ef;
+    text-align: left;
+  }
+  body.dark-mode th, body.dark-mode td { border-bottom:1px solid #555; }
+  th { background: #f4f6f9; cursor:pointer; }
+  body.dark-mode th { background: #2f2f41; }
+
+  /* Mood colors */
+  .mood-5 { color: #FFD93D; }
+  .mood-4 { color: #6BCB77; }
+  .mood-3 { color: #FF6B6B; }
+  .mood-2 { color: #FF922B; }
+  .mood-1 { color: #4D96FF; }
+
+  .action-btn { background: transparent; border: none; cursor:pointer; font-size:14px; color:#ff5c5c; }
+  .action-btn:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<header class="navbar">
+  <div class="brand"><span class="logo">✨ EmoWellbeing</span></div>
+  <nav class="nav-links">
+    <a href="dashboard.html">Home</a>
+    <a href="journal.html">Journal</a>
+    <a href="history.html" class="active">History</a>
+        <a href="quiz.html">Quiz</a>
+    
+
+  </nav>
+</header>
+
+<div class="history-container">
+
+  <!-- Mood Chart -->
+  <div class="card chart-card">
+    <h3>Mood History (Last 30 Entries)</h3>
+    <div class="chart-wrap" style="height:550px;">
+      <canvas id="historyMoodChart" aria-label="Mood history chart" role="img"></canvas>
+    </div>
+    <button id="exportMoodCSV" class="btn primary" style="margin-top:10px;">Export Mood CSV</button>
+  </div>
+
+  <!-- Journal Table -->
+  <div class="card journal-card">
+    <h3>Journal History</h3>
+
+    <div class="filters">
+      <input type="text" id="journalSearch" placeholder="Search text...">
+      <select id="moodFilter">
+        <option value="">All Moods</option>
+        <option value="5">😊 Happy</option>
+        <option value="4">🙂 Good</option>
+        <option value="3">😐 Neutral</option>
+        <option value="2">😟 Worried</option>
+        <option value="1">☹️ Sad</option>
+      </select>
+      <input type="text" id="dateRange" placeholder="YYYY-MM-DD to YYYY-MM-DD" title="Enter date range as: YYYY-MM-DD to YYYY-MM-DD">
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th data-sort="date">Date ⬍</th>
+          <th data-sort="mood">Mood ⬍</th>
+          <th>Journal</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="journalHistoryTable"></tbody>
+    </table>
+
+    <button id="exportJournalCSV" class="btn primary" style="margin-top:10px;">Export Journal CSV</button>
+  </div>
+
+</div>
+
+<script src="dashboard.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const user = localStorage.getItem("loggedInUser") || "Guest";
+  const searchField = document.getElementById("journalSearch");
+  const moodFilter = document.getElementById("moodFilter");
+  const dateRange = document.getElementById("dateRange");
+
+  let sortOrder = { column:'date', asc:false };
+
+  loadJournalHistory();
+  loadMoodHistoryChart();
+
+  searchField.addEventListener("input", loadJournalHistory);
+  moodFilter.addEventListener("change", loadJournalHistory);
+  dateRange.addEventListener("change", loadJournalHistory);
+
+  document.querySelectorAll("th[data-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.sort;
+      sortOrder.asc = sortOrder.column === col ? !sortOrder.asc : true;
+      sortOrder.column = col;
+      loadJournalHistory();
+    });
+  });
+
+  document.getElementById("exportJournalCSV").addEventListener("click", exportJournalCSV);
+  document.getElementById("exportMoodCSV").addEventListener("click", exportMoodCSV);
+
+  function loadJournalHistory() {
+    const journals = JSON.parse(localStorage.getItem(storageKey('journals', user)) || "[]");
+    let filtered = journals.slice().reverse().filter(j => {
+      let textMatch = searchField.value === "" || j.text.toLowerCase().includes(searchField.value.toLowerCase());
+      let moodMatch = moodFilter.value === "" || j.mood === moodFilter.value;
+
+      let dateMatch = true;
+      if(dateRange.value.includes("to")){
+        let [start, end] = dateRange.value.split("to").map(d => d.trim());
+        if(start) dateMatch = new Date(j.date) >= new Date(start);
+        if(end) dateMatch = dateMatch && (new Date(j.date) <= new Date(end));
+      }
+
+      return textMatch && moodMatch && dateMatch;
+    });
+
+    filtered.sort((a,b) => {
+      if(sortOrder.column==='date') return sortOrder.asc ? new Date(a.date)-new Date(b.date) : new Date(b.date)-new Date(a.date);
+      else if(sortOrder.column==='mood') return sortOrder.asc ? a.mood-b.mood : b.mood-a.mood;
+      return 0;
+    });
+
+    const tbody = document.getElementById("journalHistoryTable");
+    tbody.innerHTML = "";
+    filtered.forEach((j, index) => {
+      const tr = document.createElement("tr");
+      const moodEmoji = j.mood ? getMoodEmoji(j.mood) : "";
+      tr.innerHTML = `<td>${new Date(j.date).toLocaleString()}</td>
+                      <td class="mood-${j.mood}">${moodEmoji}</td>
+                      <td>${j.text}</td>
+                      <td><button class="action-btn" onclick="deleteJournalEntry(${index})">Delete</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function loadMoodHistoryChart() {
+    const moods = JSON.parse(localStorage.getItem(storageKey('moodHistory', user)) || "[]");
+    const last = moods.slice(-30);
+    const labels = last.map(i => new Date(i.date).toLocaleDateString());
+    const data = last.map(i => Number(i.mood));
+    const colors = data.map(m => { switch(m){case 5:return '#FFD93D'; case 4:return '#6BCB77'; case 3:return '#FF6B6B'; case 2:return '#FF922B'; case 1:return '#4D96FF'; default:return '#2575fc';}});
+    const ctx = document.getElementById("historyMoodChart").getContext("2d");
+    new Chart(ctx,{
+      type:'line',
+      data:{labels:labels,datasets:[{label:'Mood',data:data,fill:true,borderColor:'#2575fc',backgroundColor:'rgba(37,117,252,0.18)',pointBackgroundColor: colors}]},
+      options:{responsive:true,maintainAspectRatio:false,elements:{line:{tension:0.35},point:{radius:5}},scales:{y:{min:1,max:5,ticks:{stepSize:1}}},plugins:{legend:{display:false}}}
+    });
+  }
+
+  function getMoodEmoji(mood){ switch(Number(mood)){case 5:return "😊"; case 4:return "🙂"; case 3:return "😐"; case 2:return "😟"; case 1:return "☹️"; default:return "";} }
+
+  window.deleteJournalEntry = function(idx){
+    if(!confirm("Delete this journal entry?")) return;
+    const key = storageKey('journals', user);
+    const arr = JSON.parse(localStorage.getItem(key)||"[]");
+    arr.splice(arr.length-1-idx,1);
+    localStorage.setItem(key, JSON.stringify(arr));
+    loadJournalHistory();
+  }
+
+  function exportJournalCSV(){
+    const journals = JSON.parse(localStorage.getItem(storageKey('journals', user))||"[]");
+    let csv="Date,Mood,Text\n";
+    journals.forEach(j=>{csv+=`"${new Date(j.date).toLocaleString()}","${getMoodEmoji(j.mood)}","${j.text.replace(/"/g,'""')}"\n`;});
+    downloadCSV(csv,"journal_history.csv");
+  }
+
+  function exportMoodCSV(){
+    const moods = JSON.parse(localStorage.getItem(storageKey('moodHistory', user))||"[]");
+    let csv="Date,Mood\n";
+    moods.forEach(m=>{csv+=`"${new Date(m.date).toLocaleString()}","${m.mood}"\n`;});
+    downloadCSV(csv,"mood_history.csv");
+  }
+
+  function downloadCSV(content, filename){
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", filename);
+    link.click();
+  }
+
+});
+</script>
+</body>
+</html>
