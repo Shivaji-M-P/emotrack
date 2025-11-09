@@ -1,13 +1,21 @@
+import { authService } from './js/authService.js';
+import { emotions, journal } from './js/api.js';
+
 // ---------- Dashboard behavior ----------
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // Check authentication
+  const user = authService.getUser();
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
   const welcomeText = document.getElementById("welcomeText");
   const logoutBtn = document.getElementById("logoutBtn");
-  const loggedInUser = localStorage.getItem("loggedInUser") || "Guest";
-  welcomeText.textContent = `Hello, ${shortName(loggedInUser)}`;
+  welcomeText.textContent = `Hello, ${user.name}`;
 
   logoutBtn.addEventListener("click", () => {
-    localStorage.removeItem("loggedInUser");
-    window.location.href = "index.html";
+    authService.logout();
   });
 
   // Mood buttons
@@ -21,29 +29,51 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  document.getElementById("submitMood").addEventListener("click", () => {
-    if(!selectedMood) { showTempMessage("moodSavedMsg","Please select a mood first.",2500); return; }
-    saveMood(loggedInUser,selectedMood);
-    showTempMessage("moodSavedMsg","Mood saved ✓",1800);
-    selectedMood=null;
-    moodButtons.forEach(b=>b.classList.remove("selected"));
-    loadMoodHistory();
+  // Submit mood
+  document.getElementById("submitMood").addEventListener("click", async () => {
+    if (!selectedMood) {
+      showTempMessage("moodSavedMsg", "Please select a mood first.", 2500);
+      return;
+    }
+
+    try {
+      const journalEntry = document.getElementById("journalEntry").value.trim();
+      
+      // Save mood to emotions
+      await emotions.create(selectedMood, "");
+      showTempMessage("moodSavedMsg", "Mood saved ✓", 1800);
+      
+      // If there's a journal entry, save it separately
+      if (journalEntry) {
+        await journal.create(journalEntry, selectedMood);
+        document.getElementById("journalEntry").value = "";
+        showTempMessage("journalSavedMsg", "Journal saved ✓", 1800);
+      }
+      
+      selectedMood = null;
+      moodButtons.forEach(b => b.classList.remove("selected"));
+      
+      // Refresh data
+      await Promise.all([
+        loadMoodHistory(),
+        loadJournalHistory(),
+        updateStats()
+      ]);
+    } catch (error) {
+      showTempMessage("moodSavedMsg", "Failed to save: " + error.message, 2500);
+    }
   });
 
-  document.getElementById("saveJournal").addEventListener("click", ()=>{
-    const text=document.getElementById("journalEntry").value.trim();
-    if(!text){ showTempMessage("journalSavedMsg","Write something before saving.",2500); return; }
-    saveJournal(loggedInUser,text);
-    document.getElementById("journalEntry").value="";
-    showTempMessage("journalSavedMsg","Journal saved ✓",1800);
-    loadJournalHistory();
-    updateStats();
-  });
-
+  // Initialize chart and load data
   initChart();
-  loadMoodHistory();
-  loadJournalHistory();
-  updateStats();
+  Promise.all([
+    loadMoodHistory(),
+    loadJournalHistory(),
+    updateStats()
+  ]).catch(error => {
+    console.error('Error loading dashboard data:', error);
+    showTempMessage("moodSavedMsg", "Error loading dashboard data", 2500);
+  });
 
   // Dark mode toggle
   document.querySelector(".dark-toggle").addEventListener("click", () => {
@@ -57,26 +87,28 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("closeChat").addEventListener("click", ()=>{
     document.getElementById("chatbotContainer").style.display="none";
   });
-  document.getElementById("sendMessage").addEventListener("click", sendChatMessage);
-  document.getElementById("userMessage").addEventListener("keypress",(e)=>{ if(e.key==="Enter") sendChatMessage(); });
+  // Setup chat functionality if elements exist
+  const sendMessageBtn = document.getElementById("sendMessage");
+  const userMessageInput = document.getElementById("userMessage");
+  
+  if (sendMessageBtn) {
+    sendMessageBtn.addEventListener("click", sendChatMessage);
+  }
+  
+  if (userMessageInput) {
+    userMessageInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendChatMessage();
+    });
+  }
 });
 
-// ---------- Storage & helpers ----------
-function storageKey(prefix,user){ return `${prefix}_${user}`; }
-function shortName(email){ if(!email||email==="Guest") return "Guest"; const n=email.split('@')[0]; return n.charAt(0).toUpperCase()+n.slice(1); }
-function saveMood(user,mood){ 
-  const key=storageKey('moodHistory',user);
-  const arr=JSON.parse(localStorage.getItem(key)||"[]");
-  arr.push({date:new Date().toISOString(), mood:Number(mood)});
-  localStorage.setItem(key,JSON.stringify(arr.slice(-100)));
+// ---------- Helpers ----------
+function showTempMessage(elId, text, ms = 1800) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = text;
+  setTimeout(() => { el.textContent = ""; }, ms);
 }
-function saveJournal(user,text){
-  const key=storageKey('journals',user);
-  const arr=JSON.parse(localStorage.getItem(key)||"[]");
-  arr.push({date:new Date().toISOString(), text});
-  localStorage.setItem(key,JSON.stringify(arr.slice(-200)));
-}
-function showTempMessage(elId,text,ms=1800){ const el=document.getElementById(elId); if(!el) return; el.textContent=text; setTimeout(()=>{el.textContent="";},ms); }
 
 // ---------- Chart ----------
 let moodChart=null;
@@ -84,45 +116,88 @@ function initChart(){
   const ctx=document.getElementById("moodChart").getContext("2d");
   moodChart=new Chart(ctx,{type:'line',data:{labels:[],datasets:[{label:'Mood (1-5)',data:[],fill:true}]},options:{responsive:true,maintainAspectRatio:false,elements:{line:{tension:0.35},point:{radius:5}},scales:{y:{min:1,max:5,ticks:{stepSize:1}}},plugins:{legend:{display:false}}}});
 }
-function loadMoodHistory(){
-  const user=localStorage.getItem("loggedInUser")||"Guest";
-  const key=storageKey('moodHistory',user);
-  const raw=JSON.parse(localStorage.getItem(key)||"[]");
-  const dataArr=raw.length?raw:generateSampleMood();
-  const last=dataArr.slice(-14);
-  const labels=last.map(i=>new Date(i.date).toLocaleDateString(undefined,{month:'short',day:'numeric'}));
-  const data=last.map(i=>Number(i.mood));
-  const colors=last.map(i=>{ switch(Number(i.mood)){case 5:return '#FFD93D'; case 4:return '#6BCB77'; case 3:return '#FF6B6B'; case 2:return '#FF922B'; case 1:return '#4D96FF'; default:return '#2575fc';}});
-  moodChart.data.labels=labels;
-  moodChart.data.datasets[0].data=data;
-  moodChart.data.datasets[0].pointBackgroundColor=colors;
-  moodChart.data.datasets[0].borderColor='#2575fc';
-  moodChart.data.datasets[0].backgroundColor='rgba(37,117,252,0.18)';
-  moodChart.update();
-  updateStats();
+async function loadMoodHistory() {
+  try {
+    const emotionData = await emotions.getHistory();
+    
+    const last14Entries = emotionData.slice(-14);
+    const labels = last14Entries.map(entry => 
+      new Date(entry.date).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric'
+      })
+    );
+
+    const data = last14Entries.map(entry => entry.moodScore);
+    
+    const colors = last14Entries.map(entry => {
+      switch (entry.moodScore) {
+        case 5: return '#FFD93D';  // Happy
+        case 4: return '#6BCB77';  // Good
+        case 3: return '#FF6B6B';  // Neutral
+        case 2: return '#FF922B';  // Worried
+        case 1: return '#4D96FF';  // Sad
+        default: return '#2575fc';
+      }
+    });
+
+    moodChart.data.labels = labels;
+    moodChart.data.datasets[0].data = data;
+    moodChart.data.datasets[0].pointBackgroundColor = colors;
+    moodChart.data.datasets[0].borderColor = '#2575fc';
+    moodChart.data.datasets[0].backgroundColor = 'rgba(37,117,252,0.18)';
+    moodChart.update();
+  } catch (error) {
+    console.error('Failed to load mood history:', error);
+    showTempMessage("moodSavedMsg", "Failed to load mood history", 2500);
+  }
 }
-function generateSampleMood(){ const arr=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push({date:d.toISOString(),mood:3+Math.floor(Math.random()*3)-1}); } return arr; }
 
 // ---------- Journal history ----------
-function loadJournalHistory(){
-  const user=localStorage.getItem("loggedInUser")||"Guest";
-  const journals=JSON.parse(localStorage.getItem(storageKey('journals',user))||"[]");
-  const container=document.getElementById("journalHistory");
-  container.innerHTML="";
-  journals.slice(-10).reverse().forEach(j=>{
-    const el=document.createElement("div");
-    el.innerHTML=`<small>${new Date(j.date).toLocaleString()}</small><p>${j.text}</p>`;
-    container.appendChild(el);
-  });
+async function loadJournalHistory() {
+  try {
+    const journalEntries = await journal.getEntries();
+    const container = document.getElementById("journalHistory");
+    container.innerHTML = "";
+
+    // Display journal entries with mood emojis
+    journalEntries.forEach(entry => {
+      const moodEmoji = getMoodEmoji(entry.mood);
+      const el = document.createElement("div");
+      el.innerHTML = `
+        <small>${new Date(entry.entryDate).toLocaleString()} ${moodEmoji}</small>
+        <p>${entry.entryText}</p>
+      `;
+      container.appendChild(el);
+    });
+  } catch (error) {
+    console.error('Failed to load journal history:', error);
+    showTempMessage("journalSavedMsg", "Failed to load journal entries", 2500);
+  }
+}
+
+// Helper function to get mood emoji
+function getMoodEmoji(moodScore) {
+  switch (moodScore) {
+    case 5: return '😊';  // Happy
+    case 4: return '🙂';  // Good
+    case 3: return '😐';  // Neutral
+    case 2: return '😟';  // Worried
+    case 1: return '☹️';  // Sad
+    default: return '';
+  }
 }
 
 // ---------- Stats ----------
-function updateStats(){
-  const user=localStorage.getItem("loggedInUser")||"Guest";
-  const moods=JSON.parse(localStorage.getItem(storageKey('moodHistory',user))||"[]");
-  const journals=JSON.parse(localStorage.getItem(storageKey('journals',user))||"[]");
-  document.getElementById("statEntries").textContent=moods.length+journals.length;
-  document.getElementById("statAvg").textContent=moods.length?(moods.reduce((s,i)=>s+Number(i.mood),0)/moods.length).toFixed(2):"-";
+async function updateStats() {
+  try {
+    const stats = await emotions.getStats();
+    document.getElementById("statEntries").textContent = stats.totalEntries;
+    document.getElementById("statAvg").textContent = stats.averageMood;
+  } catch (error) {
+    console.error('Failed to load stats:', error);
+    showTempMessage("statEntries", "Failed to load statistics", 2500);
+  }
 }
 
 // ---------- Chatbot functions (untouched) ----------

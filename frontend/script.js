@@ -55,8 +55,11 @@ signupPassword.addEventListener("input", () => {
   strengthText.style.color = color;
 });
 
+// Import auth service
+import { authService } from './js/authService.js';
+
 // Signup Form
-signupForm.addEventListener("submit", (e) => {
+signupForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const name = document.getElementById("signupName").value.trim();
@@ -73,23 +76,25 @@ signupForm.addEventListener("submit", (e) => {
     return;
   }
 
-  localStorage.setItem("user", JSON.stringify({ name, email, password }));
-  alert("Signup successful! You can now log in.");
-  showForm("login");
+  try {
+    await authService.register(name, email, password);
+    window.location.href = "dashboard.html";
+  } catch (error) {
+    alert(error.message || "Registration failed");
+  }
 });
 
-// Login Form (No Alert – Direct Redirect)
-loginForm.addEventListener("submit", (e) => {
+// Login Form
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value.trim();
-  const user = JSON.parse(localStorage.getItem("user"));
 
-  if (user && email === user.email && password === user.password) {
-    // Redirect directly to dashboard
+  try {
+    await authService.login(email, password);
     window.location.href = "dashboard.html";
-  } else {
-    alert("Invalid email or password.");
+  } catch (error) {
+    alert(error.message || "Invalid email or password.");
   }
 });
