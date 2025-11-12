@@ -72,5 +72,6 @@ export const journal = {
 
     
     create: (entryText, mood, tags = []) => apiCall('/journal', 'POST', { entryText, mood, tags }),
-    getEntries: () => apiCall('/journal')
+    getEntries: () => apiCall('/journal'),
+    deleteEntry: (entryId) => apiCall(`/journal/${entryId}`, 'DELETE')
 };

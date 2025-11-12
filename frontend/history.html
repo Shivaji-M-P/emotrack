@@ -1,116 +1,347 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>History | EmoWellbeing</title>
-<link rel="stylesheet" href="dashboard.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-  /* Navbar centered */
-  .navbar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 14px 20px;
-    background: linear-gradient(90deg, var(--blue), #6a11cb 120%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    border-radius: 0 0 12px 12px;
-    gap: 40px;
-    position: relative;
-  }
-  .navbar .brand { position: absolute; left: 20px; }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>History | EmoWellbeing</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ===== History Container Layout ===== */
+    .history-container {
+      max-width: 1400px;
+      margin: 20px auto;
+      padding: 0 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
 
-  /* History container */
-  .history-container {
-    max-width: 1400px;
-    margin: 20px auto;
-    display: flex;
-    gap: 30px;
-    flex-wrap: wrap;
-  }
+    /* ===== Card Styling ===== */
+    .chart-card, .journal-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      transition: background 0.3s, box-shadow 0.3s;
+      overflow: hidden;
+    }
+    body.dark-mode .chart-card, body.dark-mode .journal-card {
+      background: var(--dark-card);
+      color: var(--dark-text);
+    }
 
-  /* Chart card */
-  .chart-card { flex: 1; min-width: 500px; height: 650px; }
+    .chart-card h3, .journal-card h3 {
+      margin: 0 0 15px 0;
+      font-size: 20px;
+      color: var(--blue);
+    }
+    body.dark-mode .chart-card h3, body.dark-mode .journal-card h3 {
+      color: #6a9ef9;
+    }
 
-  /* Journal card */
-  .journal-card { flex: 1.3; min-width: 600px; }
+    /* ===== Chart Wrap ===== */
+    .chart-wrap {
+      width: 100%;
+      height: 550px;
+      position: relative;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chart-wrap canvas {
+      max-width: 100%;
+      max-height: 100%;
+    }
 
-  /* Filters */
-  .filters {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .filters input, .filters select {
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid #e6e9ef;
-  }
-  body.dark-mode .filters input,
-  body.dark-mode .filters select {
-    background:#3b3b50;
-    color: var(--dark-text);
-    border:1px solid #555;
-  }
+    /* ===== Filters Section ===== */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .filters input, .filters select {
+      flex: 1;
+      min-width: 180px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #e6e9ef;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    body.dark-mode .filters input, body.dark-mode .filters select {
+      background: #3b3b50;
+      color: var(--dark-text);
+      border: 1px solid #555;
+    }
+    .filters input:focus, .filters select:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37,117,252,0.1);
+    }
 
-  /* Journal table */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-  }
-  th, td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #e6e9ef;
-    text-align: left;
-  }
-  body.dark-mode th, body.dark-mode td { border-bottom:1px solid #555; }
-  th { background: #f4f6f9; cursor:pointer; }
-  body.dark-mode th { background: #2f2f41; }
+    /* ===== Table Styling ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+      overflow-x: auto;
+      display: block;
+    }
+    table thead {
+      background: #f4f6f9;
+    }
+    body.dark-mode table thead {
+      background: #2c2c3e;
+    }
+    table th {
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--blue);
+      border-bottom: 2px solid #e6e9ef;
+      cursor: pointer;
+      user-select: none;
+    }
+    body.dark-mode table th {
+      color: #6a9ef9;
+      border-bottom: 2px solid #555;
+    }
+    table th:hover {
+      background: #e6e9ef;
+    }
+    body.dark-mode table th:hover {
+      background: #3b3b50;
+    }
+    table td {
+      padding: 12px;
+      border-bottom: 1px solid #e6e9ef;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      max-width: 350px;
+    }
+    body.dark-mode table td {
+      border-bottom: 1px solid #555;
+      color: var(--dark-text);
+    }
+    table tbody tr:hover {
+      background: #f9f9f9;
+    }
+    body.dark-mode table tbody tr:hover {
+      background: #3b3b50;
+    }
 
-  /* Mood colors */
-  .mood-5 { color: #FFD93D; }
-  .mood-4 { color: #6BCB77; }
-  .mood-3 { color: #FF6B6B; }
-  .mood-2 { color: #FF922B; }
-  .mood-1 { color: #4D96FF; }
+    /* ===== Mood Cell Styling ===== */
+    .mood-5 { color: #FFD93D; font-weight: 600; }
+    .mood-4 { color: #6BCB77; font-weight: 600; }
+    .mood-3 { color: #FF6B6B; font-weight: 600; }
+    .mood-2 { color: #FF922B; font-weight: 600; }
+    .mood-1 { color: #4D96FF; font-weight: 600; }
 
-  .action-btn { background: transparent; border: none; cursor:pointer; font-size:14px; color:#ff5c5c; }
-  .action-btn:hover { text-decoration: underline; }
-</style>
+    /* ===== Entry Content & Toggle Button ===== */
+    .entry-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .entry-content span {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .toggle-text-btn {
+      background: none;
+      border: none;
+      color: var(--blue);
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      font-size: 13px;
+      text-decoration: underline;
+      transition: color 0.2s;
+      text-align: left;
+      width: fit-content;
+    }
+    .toggle-text-btn:hover {
+      color: #6a11cb;
+    }
+    body.dark-mode .toggle-text-btn {
+      color: #6a9ef9;
+    }
+    body.dark-mode .toggle-text-btn:hover {
+      color: #8bb9ff;
+    }
+
+    /* ===== Button Styling ===== */
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    .btn.primary {
+      background: var(--blue);
+      color: white;
+    }
+    .btn.primary:hover {
+      background: #2575fc;
+    }
+    .btn.primary:active {
+      transform: translateY(0);
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* ===== Action Buttons in Table ===== */
+    .action-btn {
+      background: none;
+      border: 1px solid #e6e9ef;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      color: #555;
+    }
+    body.dark-mode .action-btn {
+      border: 1px solid #555;
+      color: #999;
+    }
+    .action-btn:hover:not(:disabled) {
+      background: #f4f6f9;
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    body.dark-mode .action-btn:hover:not(:disabled) {
+      background: #3b3b50;
+      border-color: #6a9ef9;
+      color: #6a9ef9;
+    }
+    .action-btn.delete-btn {
+      border-color: #ff4444;
+      color: #ff4444;
+    }
+    .action-btn.delete-btn:hover {
+      background: #ffe6e6;
+      border-color: #ff2222;
+      color: #ff2222;
+    }
+    body.dark-mode .action-btn.delete-btn {
+      border-color: #ff6666;
+      color: #ff6666;
+    }
+    body.dark-mode .action-btn.delete-btn:hover {
+      background: rgba(255, 68, 68, 0.1);
+      border-color: #ff8888;
+      color: #ff8888;
+    }
+
+    /* ===== Responsive Design ===== */
+    @media (max-width: 768px) {
+      .history-container {
+        padding: 0 10px;
+      }
+      .filters {
+        flex-direction: column;
+      }
+      .filters input, .filters select {
+        width: 100%;
+        min-width: unset;
+      }
+      table {
+        font-size: 13px;
+      }
+      table th, table td {
+        padding: 8px;
+      }
+      td:nth-child(3) {
+        max-width: 200px;
+      }
+      .chart-wrap {
+        height: 400px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .chart-wrap {
+        height: 300px;
+      }
+      table th, table td {
+        padding: 6px;
+        font-size: 12px;
+      }
+    }
+
+    /* ===== Loading State ===== */
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+    }
+    body.dark-mode .loading {
+      color: #999;
+    }
+
+    /* ===== Empty State ===== */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+    body.dark-mode .empty-state {
+      color: #999;
+    }
+  </style>
+    <!-- Motivational Banner styles -->
+    <style>
+      .motivational-banner { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(90deg,#667eea,#764ba2); color: white; padding:12px 16px; text-align:center; font-size:15px; font-weight:600; z-index:100; box-shadow:0 -4px 20px rgba(0,0,0,0.12); overflow:hidden; height:56px; display:flex; align-items:center; justify-content:center; }
+      .motivational-text{ display:inline-block; animation:slide 15s linear infinite; white-space:nowrap; padding:0 20px; }
+      .motivational-text .mot-part{ display:inline-block; margin-right:28px; padding:0 6px; }
+      @keyframes slide{ 0%{ transform:translateX(100%);} 100%{ transform:translateX(-100%);} }
+      .motivational-banner:hover .motivational-text{ animation-play-state:paused; }
+      main { padding-bottom: 80px; }
+    </style>
 </head>
 <body>
 
-<!-- Navbar -->
 <header class="navbar">
-  <div class="brand"><span class="logo">✨ EmoWellbeing</span></div>
+  <div class="brand">
+    <span class="logo">✨ EmoWellbeing</span>
+  </div>
   <nav class="nav-links">
     <a href="dashboard.html">Home</a>
     <a href="journal.html">Journal</a>
     <a href="history.html" class="active">History</a>
-        <a href="quiz.html">Quiz</a>
-    
-
+    <a href="quiz.html">Quiz</a>
+    <a href="games.html">Games</a>
   </nav>
+  <div class="user-controls">
+    <button class="dark-toggle" id="darkToggleBtn" aria-label="Toggle theme">🌙</button>
+  </div>
 </header>
 
-<div class="history-container">
-
-  <!-- Mood Chart -->
-  <div class="card chart-card">
+<main class="history-container">
+  <section class="card chart-card">
     <h3>Mood History (Last 30 Entries)</h3>
     <div class="chart-wrap" style="height:550px;">
       <canvas id="historyMoodChart" aria-label="Mood history chart" role="img"></canvas>
     </div>
     <button id="exportMoodCSV" class="btn primary" style="margin-top:10px;">Export Mood CSV</button>
-  </div>
+  </section>
 
-  <!-- Journal Table -->
-  <div class="card journal-card">
+  <section class="card journal-card">
     <h3>Journal History</h3>
 
     <div class="filters">
@@ -139,122 +370,53 @@
     </table>
 
     <button id="exportJournalCSV" class="btn primary" style="margin-top:10px;">Export Journal CSV</button>
-  </div>
+  </section>
+</main>
 
-</div>
-
-<script src="dashboard.js"></script>
+<script type="module" src="./js/history.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const user = localStorage.getItem("loggedInUser") || "Guest";
-  const searchField = document.getElementById("journalSearch");
-  const moodFilter = document.getElementById("moodFilter");
-  const dateRange = document.getElementById("dateRange");
-
-  let sortOrder = { column:'date', asc:false };
-
-  loadJournalHistory();
-  loadMoodHistoryChart();
-
-  searchField.addEventListener("input", loadJournalHistory);
-  moodFilter.addEventListener("change", loadJournalHistory);
-  dateRange.addEventListener("change", loadJournalHistory);
-
-  document.querySelectorAll("th[data-sort]").forEach(th => {
-    th.addEventListener("click", () => {
-      const col = th.dataset.sort;
-      sortOrder.asc = sortOrder.column === col ? !sortOrder.asc : true;
-      sortOrder.column = col;
-      loadJournalHistory();
+  document.addEventListener('DOMContentLoaded', () => {
+    const isDark = localStorage.getItem('darkMode') === 'true';
+    if (isDark) document.body.classList.add('dark-mode');
+    const toggle = document.querySelector('.dark-toggle');
+    if (toggle) toggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
     });
   });
+</script>
+<!-- Motivational Banner (shared) -->
+<div class="motivational-banner" id="motivationalBanner">
+  <span class="motivational-text" id="motivationalText">✨ Be present • Breathe deeply • You are capable • Small steps matter</span>
+</div>
 
-  document.getElementById("exportJournalCSV").addEventListener("click", exportJournalCSV);
-  document.getElementById("exportMoodCSV").addEventListener("click", exportMoodCSV);
+<script>
+  const motivationalMessages = [
+    "✨ Be present • Breathe deeply • You are capable • Small steps matter",
+    "🌟 Believe in yourself • Take a moment • You are enough • Keep going",
+    "💖 Practice kindness • Rest when needed • Celebrate progress • Breathe",
+  ];
+  let messageIndex = 0;
 
-  function loadJournalHistory() {
-    const journals = JSON.parse(localStorage.getItem(storageKey('journals', user)) || "[]");
-    let filtered = journals.slice().reverse().filter(j => {
-      let textMatch = searchField.value === "" || j.text.toLowerCase().includes(searchField.value.toLowerCase());
-      let moodMatch = moodFilter.value === "" || j.mood === moodFilter.value;
-
-      let dateMatch = true;
-      if(dateRange.value.includes("to")){
-        let [start, end] = dateRange.value.split("to").map(d => d.trim());
-        if(start) dateMatch = new Date(j.date) >= new Date(start);
-        if(end) dateMatch = dateMatch && (new Date(j.date) <= new Date(end));
-      }
-
-      return textMatch && moodMatch && dateMatch;
-    });
-
-    filtered.sort((a,b) => {
-      if(sortOrder.column==='date') return sortOrder.asc ? new Date(a.date)-new Date(b.date) : new Date(b.date)-new Date(a.date);
-      else if(sortOrder.column==='mood') return sortOrder.asc ? a.mood-b.mood : b.mood-a.mood;
-      return 0;
-    });
-
-    const tbody = document.getElementById("journalHistoryTable");
-    tbody.innerHTML = "";
-    filtered.forEach((j, index) => {
-      const tr = document.createElement("tr");
-      const moodEmoji = j.mood ? getMoodEmoji(j.mood) : "";
-      tr.innerHTML = `<td>${new Date(j.date).toLocaleString()}</td>
-                      <td class="mood-${j.mood}">${moodEmoji}</td>
-                      <td>${j.text}</td>
-                      <td><button class="action-btn" onclick="deleteJournalEntry(${index})">Delete</button></td>`;
-      tbody.appendChild(tr);
-    });
+  function renderMotivationalMessageTo(el, message) {
+    const parts = message.split('•').map(p => p.trim()).filter(Boolean);
+    el.innerHTML = parts.map(p => `<span class=\"mot-part\">${p}</span>`).join('');
   }
 
-  function loadMoodHistoryChart() {
-    const moods = JSON.parse(localStorage.getItem(storageKey('moodHistory', user)) || "[]");
-    const last = moods.slice(-30);
-    const labels = last.map(i => new Date(i.date).toLocaleDateString());
-    const data = last.map(i => Number(i.mood));
-    const colors = data.map(m => { switch(m){case 5:return '#FFD93D'; case 4:return '#6BCB77'; case 3:return '#FF6B6B'; case 2:return '#FF922B'; case 1:return '#4D96FF'; default:return '#2575fc';}});
-    const ctx = document.getElementById("historyMoodChart").getContext("2d");
-    new Chart(ctx,{
-      type:'line',
-      data:{labels:labels,datasets:[{label:'Mood',data:data,fill:true,borderColor:'#2575fc',backgroundColor:'rgba(37,117,252,0.18)',pointBackgroundColor: colors}]},
-      options:{responsive:true,maintainAspectRatio:false,elements:{line:{tension:0.35},point:{radius:5}},scales:{y:{min:1,max:5,ticks:{stepSize:1}}},plugins:{legend:{display:false}}}
-    });
+  function rotateMotivationalMessage() {
+    const textElement = document.getElementById('motivationalText');
+    if (!textElement) return;
+    messageIndex = (messageIndex + 1) % motivationalMessages.length;
+    renderMotivationalMessageTo(textElement, motivationalMessages[messageIndex]);
+    textElement.style.animation = 'none';
+    setTimeout(() => { textElement.style.animation = 'slide 15s linear infinite'; }, 10);
   }
 
-  function getMoodEmoji(mood){ switch(Number(mood)){case 5:return "😊"; case 4:return "🙂"; case 3:return "😐"; case 2:return "😟"; case 1:return "☹️"; default:return "";} }
-
-  window.deleteJournalEntry = function(idx){
-    if(!confirm("Delete this journal entry?")) return;
-    const key = storageKey('journals', user);
-    const arr = JSON.parse(localStorage.getItem(key)||"[]");
-    arr.splice(arr.length-1-idx,1);
-    localStorage.setItem(key, JSON.stringify(arr));
-    loadJournalHistory();
-  }
-
-  function exportJournalCSV(){
-    const journals = JSON.parse(localStorage.getItem(storageKey('journals', user))||"[]");
-    let csv="Date,Mood,Text\n";
-    journals.forEach(j=>{csv+=`"${new Date(j.date).toLocaleString()}","${getMoodEmoji(j.mood)}","${j.text.replace(/"/g,'""')}"\n`;});
-    downloadCSV(csv,"journal_history.csv");
-  }
-
-  function exportMoodCSV(){
-    const moods = JSON.parse(localStorage.getItem(storageKey('moodHistory', user))||"[]");
-    let csv="Date,Mood\n";
-    moods.forEach(m=>{csv+=`"${new Date(m.date).toLocaleString()}","${m.mood}"\n`;});
-    downloadCSV(csv,"mood_history.csv");
-  }
-
-  function downloadCSV(content, filename){
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", filename);
-    link.click();
-  }
-
-});
+  document.addEventListener('DOMContentLoaded', () => {
+    const textElement = document.getElementById('motivationalText');
+    if (textElement) renderMotivationalMessageTo(textElement, motivationalMessages[messageIndex]);
+    setInterval(rotateMotivationalMessage, 20000);
+  });
 </script>
 </body>
 </html>

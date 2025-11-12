@@ -79,3 +79,47 @@ export const getJournalEntries = async (req, res) => {
         res.status(500).json({ message: "Error fetching journal entries" });
     }
 };
+
+// @desc    Delete a journal entry
+// @route   DELETE /api/journal/:id
+// @access  Private
+export const deleteJournalEntry = async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(req.params)
+
+        // Validate entry ID
+        if (!id) {
+            return res.status(400).json({ message: 'Journal entry ID is required' });
+        }
+
+        // Find the entry
+        const entry = await Journal.findById(id);
+
+        if (!entry) {
+            return res.status(404).json({ message: 'Journal entry not found' });
+        }
+
+        // Verify ownership - user can only delete their own entries
+        if (entry.student.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to delete this entry' });
+        }
+
+        // Delete the entry
+        await Journal.findByIdAndDelete(id);
+
+        console.log('Journal entry deleted:', {
+            id: entry._id,
+            userId: entry.student,
+            deletedAt: new Date()
+        });
+
+        res.json({ message: 'Journal entry deleted successfully', id });
+    } catch (error) {
+        console.error('Journal delete error:', error);
+        res.status(500).json({ 
+            message: "Error deleting journal entry",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};

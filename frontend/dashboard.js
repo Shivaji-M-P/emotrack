@@ -75,9 +75,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     showTempMessage("moodSavedMsg", "Error loading dashboard data", 2500);
   });
 
-  // Dark mode toggle
-  document.querySelector(".dark-toggle").addEventListener("click", () => {
+  // Dark mode toggle with persistence
+  const darkToggle = document.querySelector(".dark-toggle");
+  
+  // Load dark mode preference
+  const isDarkMode = localStorage.getItem("darkMode") === "true";
+  if (isDarkMode) {
+    document.body.classList.add("dark-mode");
+  }
+  
+  // Toggle dark mode
+  darkToggle.addEventListener("click", () => {
     document.body.classList.toggle("dark-mode");
+    const isNowDark = document.body.classList.contains("dark-mode");
+    localStorage.setItem("darkMode", isNowDark);
   });
 
   // Chatbot toggle
@@ -101,6 +112,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 });
+
+// Defensive: ensure DOM elements for chatbot exist before binding toggles when script loaded early
+function safeQuery(id) {
+  return document.getElementById(id) || null;
+}
+
+// Bind chatbot buttons only if present (script may run as module before DOM complete in some environments)
+const _chatToggle = safeQuery('chatToggleBtn');
+const _chatbotContainer = safeQuery('chatbotContainer');
+const _closeChat = safeQuery('closeChat');
+if (_chatToggle && _chatbotContainer) {
+  _chatToggle.addEventListener('click', () => { _chatbotContainer.style.display = _chatbotContainer.style.display === 'flex' ? 'none' : 'flex'; });
+}
+if (_closeChat && _chatbotContainer) {
+  _closeChat.addEventListener('click', () => { _chatbotContainer.style.display = 'none'; });
+}
 
 // ---------- Helpers ----------
 function showTempMessage(elId, text, ms = 1800) {
@@ -202,15 +229,3 @@ async function updateStats() {
 
 // ---------- Chatbot functions (untouched) ----------
 
-// Chatbot toggle
-const chatToggleBtn = document.getElementById("chatToggleBtn");
-const chatbotContainer = document.getElementById("chatbotContainer");
-const closeChatBtn = document.getElementById("closeChat");
-
-chatToggleBtn.addEventListener("click", () => {
-  chatbotContainer.style.display = chatbotContainer.style.display === "flex" ? "none" : "flex";
-});
-
-closeChatBtn.addEventListener("click", () => {
-  chatbotContainer.style.display = "none";
-});

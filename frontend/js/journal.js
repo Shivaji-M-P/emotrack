@@ -109,18 +109,34 @@ async function loadJournalHistory(filterText = '', filterMood = '') {
     });
 
     // render
-    filtered.forEach(e => {
+    filtered.forEach((e, index) => {
       const moodTag = e.mood ? `<span class="entry-mood">${getMoodEmoji(e.mood)}</span>` : '';
       const div = document.createElement('div');
       div.className = 'journal-entry';
       if (e.mood) div.dataset.mood = e.mood;
+      
+      const entryId = `entry-${Date.now()}-${index}`;
+      const isLongText = e.entryText.length > 300;
+      const truncatedText = isLongText ? e.entryText.substring(0, 300) + '...' : e.entryText;
+      
       div.innerHTML = `
         <div class="entry-header">
           <small>${new Date(e.entryDate).toLocaleString()}</small> ${moodTag}
         </div>
-        <p>${escapeHtml(e.entryText)}</p>
+        <p id="${entryId}-text" class="entry-text">${escapeHtml(truncatedText)}</p>
+        ${isLongText ? `
+          <button id="${entryId}-toggle" class="show-more-btn" data-entry-id="${entryId}" data-full-text="${escapeHtmlForAttr(e.entryText)}" data-is-expanded="false">
+            Show More
+          </button>
+        ` : ''}
       `;
       container.appendChild(div);
+      
+      // Attach event listener for Show More/Less button
+      if (isLongText) {
+        const toggleBtn = document.getElementById(`${entryId}-toggle`);
+        toggleBtn.addEventListener('click', () => toggleEntryText(entryId, e.entryText));
+      }
     });
 
     loadJournalMoodChart(entries);
@@ -128,6 +144,25 @@ async function loadJournalHistory(filterText = '', filterMood = '') {
     console.error('Failed to load journal entries:', err);
     const msg = err.bodyText ? `Server error: ${err.bodyText.slice(0,200)}` : (err.message || 'Failed to load journal entries');
     showTempMessage('journalSavedMsg', msg, 4000);
+  }
+}
+
+// Toggle Show More/Less for entries
+function toggleEntryText(entryId, fullText) {
+  const textEl = document.getElementById(`${entryId}-text`);
+  const toggleBtn = document.getElementById(`${entryId}-toggle`);
+  const isExpanded = toggleBtn.dataset.isExpanded === 'true';
+  
+  if (isExpanded) {
+    // Collapse
+    textEl.textContent = fullText.substring(0, 300) + '...';
+    toggleBtn.textContent = 'Show More';
+    toggleBtn.dataset.isExpanded = 'false';
+  } else {
+    // Expand
+    textEl.textContent = fullText;
+    toggleBtn.textContent = 'Show Less';
+    toggleBtn.dataset.isExpanded = 'true';
   }
 }
 
@@ -186,4 +221,11 @@ function escapeHtml(unsafe) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function escapeHtmlForAttr(unsafe) {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

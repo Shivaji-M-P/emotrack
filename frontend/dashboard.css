@@ -25,12 +25,17 @@ body.dark-mode { background: var(--dark-bg); color: var(--dark-text); }
 .navbar {
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:center; /* center nav links visually */
   padding:14px 20px;
   background: linear-gradient(90deg,var(--blue), #6a11cb 120%);
   color: white;
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
   border-radius: 0 0 12px 12px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
 }
 .brand { display:flex; align-items:center; gap:12px; }
 .logo { font-weight:700; font-size:18px; }
@@ -38,7 +43,7 @@ body.dark-mode { background: var(--dark-bg); color: var(--dark-text); }
 .nav-links { display:flex; gap:16px; align-items:center; }
 .nav-links a { color: rgba(255,255,255,0.95); text-decoration:none; font-weight:500; padding:6px 8px; border-radius:8px; }
 .nav-links a.active, .nav-links a:hover { background: rgba(255,255,255,0.08); }
-.user-controls { display:flex; gap:8px; align-items:center; }
+.user-controls { display:flex; gap:8px; align-items:center; position:absolute; right:16px; top:50%; transform:translateY(-50%); }
 
 /* ===== Buttons ===== */
 .btn { border: none; padding:8px 12px; border-radius:12px; cursor:pointer; font-weight:600; transition: all 0.2s; }
@@ -136,20 +141,27 @@ body.dark-mode .journal-history { background:#2f2f41; }
 
 /* ===== Dark mode toggle button ===== */
 .dark-toggle {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  background: #111827;
+  position: relative; /* inside header's right controls */
+  left: auto;
+  top: auto;
+  transform: none;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   border:none;
-  border-radius:50%;
-  width:50px;
-  height:50px;
+  border-radius:8px;
+  width:44px;
+  height:36px;
   cursor:pointer;
-  font-size:22px;
-  z-index:2000;
+  font-size:18px;
+  z-index:1200;
   box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
 }
+
+/* ensure page content isn't hidden under fixed header */
+main, .main-grid, .games-container { padding-top: 72px; }
 
 /* ===== Chatbot (updated layout) ===== */
 .chat-toggle {
@@ -177,20 +189,7 @@ body.dark-mode .journal-entry { background: #3b3b50; }
 .entry-mood { margin-left: 8px; }
 .delete-entry { background: transparent; border: none; color: #ff5c5c; cursor: pointer; font-size: 14px; }
 .mood-select { margin: 10px 0; }
-/* Add this to your dashboard.css or journal.css */
-/* Navbar centered links */
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: center; /* center all items horizontally */
-  padding: 14px 20px;
-  background: linear-gradient(90deg, var(--blue), #6a11cb 120%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  border-radius: 0 0 12px 12px;
-  gap: 40px; /* spacing between logo and links */
-}
-
+/* Additional navbar helpers - keep brand left and links centered */
 .navbar .brand {
   position: absolute; /* keep the logo visible */
   left: 20px;
@@ -200,6 +199,7 @@ body.dark-mode .journal-entry { background: #3b3b50; }
   display: flex;
   gap: 24px;
   align-items: center;
+  justify-content: center;
 }
 
 /* ===== Chatbot container ===== */
