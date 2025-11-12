@@ -6,6 +6,7 @@ import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import emotionRoutes from "./routes/emotionRoutes.js";
 import journalRoutes from "./routes/journalRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -34,6 +35,15 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json());
 
+// Handle malformed JSON errors from express.json() early and return a clear 400 response
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.warn('Malformed JSON in request body:', { path: req.originalUrl });
+        return res.status(400).json({ message: 'Malformed JSON in request body' });
+    }
+    next(err);
+});
+
 // Log all API requests in development
 if (process.env.NODE_ENV !== 'production') {
     app.use('/api', (req, res, next) => {
@@ -49,6 +59,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.use("/api/users", userRoutes);
 app.use("/api/emotions", emotionRoutes);
 app.use("/api/journal", journalRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Simple health endpoint to verify API is running
 app.get('/api/ping', (req, res) => {
@@ -56,7 +67,7 @@ app.get('/api/ping', (req, res) => {
 });
 
 // Log mounted routes (simple confirmation)
-console.log('Mounted routes: /api/users, /api/emotions, /api/journal');
+console.log('Mounted routes: /api/users, /api/emotions, /api/journal, /api/chat');
 
 // Return JSON for unknown /api/* routes instead of Express HTML 404 — helps frontend debug
 app.use('/api', (req, res) => {
